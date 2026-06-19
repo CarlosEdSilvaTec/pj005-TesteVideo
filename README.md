@@ -59,13 +59,15 @@ Edite o dicionário `scenes` em `gerar_video.py` para alterar textos, cores e du
 
 ## 🗣️ Sincronização Labial (Lip Sync)
 
-O avatar possui animação de boca sincronizada com o áudio usando as seguintes técnicas:
+O avatar possui animação de boca sincronizada com o áudio usando warping de textura real:
 
-- **Warping bilateral** — `cv2.remap` com interpolação bilinear para deformar a imagem original pixel-a-pixel
-- **Textura preservada** — A aparência real da boca (pele, cor, sombras) é mantida, sem desenho sintético
-- **Movimento natural** — Lábio superior sobe sutilmente (6%), inferior desce mais (22%)
-- **Cavidade oral** — Gradiente escuro com dentes realistas segmentados verticalmente
-- **Micro-variações** — Respiração sutil e oscilações orgânicas para naturalidade
+- **Contexto ampliado** — Warp aplicado em região 2.7x maior que a boca, incluindo pele ao redor para transições naturais
+- **Warp 2D orgânico** — `cv2.remap` com perfil de deslocamento gaussiano: suave no centro, zero nas bordas
+- **Falloff gaussiano** — Deformação máxima na linha dos lábios, desaparecendo gradualmente no rosto
+- **Cavidade oral poligonal** — Preenchimento com curva de taper, bordas suaves e profundidade gradiente
+- **Dentes em arco** — Segmentos individuais seguindo curvatura senoidal, superiores e inferiores
+- **Assimetria dinâmica** — Variação lado a lado em cada frame para movimento orgânico
+- **Micro-variações** — Respiração com frequências combinadas (2.8Hz + 5.3Hz)
 - **Máscara elíptica** — Feathering suave para blend imperceptível com o rosto
 
 ## 📄 Licença
