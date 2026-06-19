@@ -1,6 +1,6 @@
 # 🎬 IA Generativa para Redes Sociais
 
-Projeto que demonstra o potencial das IAs Generativas na criação de conteúdo para redes sociais, com um vídeo de 1 minuto apresentando um avatar virtual brasileiro com narração em português.
+Projeto que demonstra o potencial das IAs Generativas na criação de conteúdo para redes sociais, com um vídeo de 1 minuto apresentando um avatar virtual brasileiro com narração em português e sincronização labial (lip sync).
 
 ## 📋 Conteúdo
 
@@ -56,6 +56,17 @@ Edite o dicionário `scenes` em `gerar_video.py` para alterar textos, cores e du
 - **Stable Diffusion (Pollinations.ai)** — Geração do avatar
 - **FFmpeg** — Codificação H.264 e mixagem de áudio
 - **GitHub CLI** — Versionamento e publicação
+
+## 🗣️ Sincronização Labial (Lip Sync)
+
+O avatar possui animação de boca sincronizada com o áudio usando as seguintes técnicas:
+
+- **Warping bilateral** — `cv2.remap` com interpolação bilinear para deformar a imagem original pixel-a-pixel
+- **Textura preservada** — A aparência real da boca (pele, cor, sombras) é mantida, sem desenho sintético
+- **Movimento natural** — Lábio superior sobe sutilmente (6%), inferior desce mais (22%)
+- **Cavidade oral** — Gradiente escuro com dentes realistas segmentados verticalmente
+- **Micro-variações** — Respiração sutil e oscilações orgânicas para naturalidade
+- **Máscara elíptica** — Feathering suave para blend imperceptível com o rosto
 
 ## 📄 Licença
 
