@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IA Generativa - Redes Sociais</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f23; overflow: hidden; }
+  .slide {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    padding: 40px; opacity: 0; transition: opacity 0.6s ease;
+    pointer-events: none;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  h1 { font-size: 3em; color: #fff; margin-bottom: 20px; }
+  h2 { font-size: 2em; color: #7dd3fc; margin-bottom: 16px; }
+  p  { font-size: 1.3em; color: #cbd5e1; max-width: 700px; line-height: 1.5; }
+  .tag { color: #a78bfa; font-weight: bold; }
+
+  .icon-grid { display: flex; gap: 40px; margin-top: 30px; flex-wrap: wrap; justify-content: center; }
+  .icon-box { background: #1e1e3f; border-radius: 20px; padding: 30px; width: 160px; }
+  .icon-box .emoji { font-size: 3em; display: block; margin-bottom: 10px; }
+  .icon-box span { color: #e2e8f0; font-size: 1em; }
+
+  .demo-box {
+    background: #1e1e3f; border-radius: 20px; padding: 25px 35px;
+    margin-top: 20px; max-width: 600px; width: 100%;
+  }
+  .demo-box .arrow { color: #7dd3fc; font-size: 2em; margin: 10px 0; }
+  .demo-box .input { color: #f87171; font-size: 1.1em; }
+  .demo-box .output { color: #34d399; font-size: 1.1em; }
+
+  .bar {
+    position: fixed; bottom: 0; left: 0; height: 4px; background: linear-gradient(90deg, #7dd3fc, #a78bfa);
+    transition: width 0.1s linear;
+  }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 2em; }
+    h2 { font-size: 1.5em; }
+    p { font-size: 1em; }
+    .icon-box { width: 120px; padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="slide active" id="s0">
+  <h1>IA Generativa</h1>
+  <h2>📱 Criação de Conteúdo para Redes Sociais</h2>
+  <p style="margin-top:30px;color:#94a3b8;">Posts · Legendas · Imagens · Roteiros</p>
+</div>
+
+<div class="slide" id="s1">
+  <h2>⚡ Como funciona?</h2>
+  <div class="demo-box">
+    <div class="input">"Post sobre lançamento de novo produto"</div>
+    <div class="arrow">⬇️</div>
+    <div class="output">✨ Legenda pronta + hashtags + sugestão de imagem</div>
+  </div>
+  <p style="margin-top:25px;font-size:1.1em;">Um comando gera conteúdo completo em segundos</p>
+</div>
+
+<div class="slide" id="s2">
+  <h2>🎯 Benefícios</h2>
+  <div class="icon-grid">
+    <div class="icon-box"><span class="emoji">⏱️</span><span>Economia de horas</span></div>
+    <div class="icon-box"><span class="emoji">📈</span><span>Consistência</span></div>
+    <div class="icon-box"><span class="emoji">💡</span><span>Fim do bloqueio criativo</span></div>
+  </div>
+</div>
+
+<div class="slide" id="s3">
+  <h2>🛍️ Na prática</h2>
+  <p>Uma loja pequena gera <strong style="color:#fbbf24;">1 mês</strong> de posts em <strong style="color:#fbbf24;">15 minutos</strong>.</p>
+  <div style="margin-top:30px;background:#1e1e3f;border-radius:16px;padding:20px;max-width:500px;">
+    <div style="text-align:left;color:#94a3b8;font-size:1.1em;">
+      📅 Seg: Dica de uso<br>
+      📅 Ter: Bastidores<br>
+      📅 Qua: Produto em destaque<br>
+      📅 Qui: Depoimento<br>
+      📅 Sex: Promoção
+    </div>
+  </div>
+  <p style="margin-top:20px;font-size:0.9em;color:#64748b;">Revisar e publicar — só isso.</p>
+</div>
+
+<div class="slide" id="s4">
+  <h1 style="font-size:2.5em;">🚀</h1>
+  <h2>IA não substitui você.</h2>
+  <h2 style="color:#fbbf24;">Ela acelera seu trabalho.</h2>
+  <p style="margin-top:30px;color:#7dd3fc;">Experimente você também!</p>
+</div>
+
+<div class="bar" id="bar"></div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const bar = document.getElementById('bar');
+  const total = slides.length;
+  const duration = 60000;
+  const timings = [0, 10000, 25000, 40000, 55000];
+  let current = 0;
+
+  function update(time) {
+    const pct = Math.min((time / duration) * 100, 100);
+    bar.style.width = pct + '%';
+
+    for (let i = timings.length - 1; i >= 0; i--) {
+      if (time >= timings[i]) {
+        if (i !== current) {
+          slides[current].classList.remove('active');
+          current = i;
+          slides[current].classList.add('active');
+        }
+        break;
+      }
+    }
+
+    if (time < duration) requestAnimationFrame(update);
+  }
+
+  requestAnimationFrame(update);
+</script>
+</body>
+</html>

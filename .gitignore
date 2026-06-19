@@ -1,0 +1,25 @@
+# Large generated binaries
+ffmpeg.exe
+
+# Generated video output
+video_final.mp4
+_raw.mp4
+_raw.mp4.tmp.mp4
+test.mp4
+test2.mp4
+*.tmp.mp4
+
+# Generated sample frames
+frame_*.jpg
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
