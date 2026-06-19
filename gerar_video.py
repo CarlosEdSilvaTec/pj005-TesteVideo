@@ -58,64 +58,124 @@ cv2.circle(face_mask, (AVATAR_SIZE // 2, AVATAR_SIZE // 2), AVATAR_SIZE // 2 - 1
 face_mask = cv2.GaussianBlur(face_mask, (15, 15), 0)
 
 
-def mouth_sync(img, openness):
-    r = img[my:my + mh, mx:mx + mw].copy()
-    hh, ww = r.shape[:2]
-    op = min(1.0, openness * 1.2)
+# Pre-capture mouth texture (original closed mouth)
+_mouth_h = mh
+_mouth_w = mw
+_mouth_ref = avatar_base[my:my + mh, mx:mx + mw].copy()
+# Find horizontal center line of mouth (darkest row = lip seam)
+_mouth_gray = cv2.cvtColor(_mouth_ref, cv2.COLOR_BGR2GRAY)
+_row_means = [_mouth_gray[y, :].mean() for y in range(_mouth_h)]
+_lip_seam_y = int(np.argmin(_row_means[_mouth_h//4 : 3*_mouth_h//4])) + _mouth_h//4
 
-    # Full mouth area overlay with distinct colors
-    cv2.ellipse(r, (ww // 2, hh // 2), (ww // 2 - 1, hh // 2 - 1), 0, 0, 360, skin_color, -1)
+# Pre-compute vertical mapping for warping (pixel-accurate)
+_out_rows = np.arange(_mouth_h, dtype=np.float32)
 
-    if op > 0.05:
-        cav_h = int(hh * 0.55 * op)
-        cav_w = int(ww * 0.75 * op)
+# Create elliptical feather mask for smooth blending
+_yy, _xx = np.mgrid[0:_mouth_h, 0:_mouth_w]
+_cx_m = _mouth_w // 2
+_cy_m = _mouth_h // 2
+_mouth_mask_float = np.clip(1.0 - ((_xx - _cx_m)**2 / ((_mouth_w/2)**2) + (_yy - _cy_m)**2 / ((_mouth_h/2)**2)), 0, 1)
+_mouth_mask_float = cv2.GaussianBlur(_mouth_mask_float, (11, 11), 0)
 
-        # Dark oral cavity
-        cv2.ellipse(r, (ww // 2, hh // 2), (max(4, cav_w // 2), max(4, cav_h // 2)), 0, 0, 360, (8, 4, 2), -1)
 
-        # Teeth
-        if op > 0.12:
-            t_h = max(3, int(cav_h * 0.2))
-            cy = hh // 2
-            cw2 = cav_w // 2
-            ch2 = cav_h // 2
-            cv2.rectangle(r, (ww // 2 - cw2 + 4, cy - ch2 + 2),
-                          (ww // 2 + cw2 - 4, cy - ch2 + 2 + t_h), (245, 235, 225), -1)
-            cv2.rectangle(r, (ww // 2 - cw2 + 4, cy + ch2 - 2 - t_h),
-                          (ww // 2 + cw2 - 4, cy + ch2 - 2), (245, 235, 225), -1)
+def mouth_sync(img, openness, t=0):
+    op = min(1.0, openness * 1.4)
+    op = op * op * (3 - 2 * op)
 
-    # Lips
-    lip_bright = tuple(min(255, c + 50) for c in lip_color)
-    lip_dark = tuple(max(0, c - 30) for c in lip_color)
-    uv = max(2, int(ww * 0.12))
-    lv = max(2, int(ww * 0.10))
+    breathe = math.sin(t * 2.5) * 0.015
+    op = max(0.0, min(1.0, op + breathe))
 
-    # Upper lip
-    cv2.ellipse(r, (ww // 2, 0), (ww // 2 - 1, uv), 0, 0, 360, lip_bright, -1)
-    cv2.ellipse(r, (ww // 2, 1), (ww // 2 - 3, uv - 1), 0, 180, 360, lip_dark, 2)
+    # Upper lip moves UP by a fraction; lower lip moves DOWN more
+    upper_shift = int(_mouth_h * 0.06 * op)   # subtle upward
+    lower_shift = int(_mouth_h * 0.22 * op)   # more downward
 
-    # Lower lip
-    cv2.ellipse(r, (ww // 2, hh), (ww // 2 - 1, lv), 0, 0, 360, lip_bright, -1)
-    cv2.ellipse(r, (ww // 2, hh - 1), (ww // 2 - 3, lv - 1), 0, 0, 180, lip_dark, 2)
+    # Build a vertical remap array: for each output row y, where to sample from _mouth_ref
+    remap_y = np.zeros(_mouth_h, dtype=np.float32)
+    seam = _lip_seam_y
 
-    if op > 0.05:
-        # Open: show separation
-        cl = int(ww * 0.45)
-        y_line = hh // 2 + int(cav_h * 0.05)
-        cv2.line(r, (ww // 2 - cl, y_line), (ww // 2 + cl, y_line), lip_dark, 2)
-    else:
-        # Closed: single lip line
-        cv2.line(r, (2, hh // 2), (ww - 2, hh // 2), lip_dark, 3)
+    for y in range(_mouth_h):
+        if y < seam:
+            # Upper region: rows get compressed upward
+            if upper_shift > 0:
+                # Map output row y to source row (with upward offset for rows near seam)
+                blend = max(0, (seam - y)) / max(1, seam)
+                remap_y[y] = y + upper_shift * blend
+            else:
+                remap_y[y] = y
+        else:
+            # Lower region: rows get stretched downward
+            if lower_shift > 0:
+                lower_frac = (y - seam) / max(1, _mouth_h - seam)
+                remap_y[y] = y - lower_shift * (1 - lower_frac)
+            else:
+                remap_y[y] = y
 
-    # Soft blend edges
-    msk = np.zeros((hh, ww), dtype=np.uint8)
-    cv2.ellipse(msk, (ww // 2, hh // 2), (ww // 2, hh // 2), 0, 0, 360, 255, -1)
-    msk = cv2.GaussianBlur(msk, (5, 5), 0)
+    # Clamp
+    remap_y = np.clip(remap_y, 0, _mouth_h - 1)
 
-    roi = img[my:my + mh, mx:mx + mw]
+    # Build remap_x (identity for all rows)
+    remap_x = np.tile(np.arange(_mouth_w, dtype=np.float32), (_mouth_h, 1))
+
+    remap_y_2d = np.tile(remap_y.reshape(_mouth_h, 1), (1, _mouth_w))
+
+    # Ensure correct types
+    remap_x_f32 = remap_x.astype(np.float32)
+    remap_y_2d_f32 = remap_y_2d.astype(np.float32)
+
+    # Apply remap using OpenCV (bilinear)
+    r = cv2.remap(_mouth_ref, remap_x_f32, remap_y_2d_f32, cv2.INTER_LINEAR,
+                   borderMode=cv2.BORDER_REPLICATE)
+
+    # Oral cavity when mouth is open
+    if op > 0.04:
+        gap_h = int((_mouth_h * 0.30) * op)
+        cavity_top = seam - upper_shift
+        cavity_bot = seam + lower_shift
+        cavity_h = int(cavity_bot - cavity_top)
+        if cavity_h > 3:
+            # Draw dark cavity on r
+            for y_off in range(cavity_h):
+                y_abs = int(cavity_top + y_off)
+                if 0 <= y_abs < _mouth_h:
+                    progress = y_off / max(1, cavity_h)
+                    darkness = 10 + int(15 * (1 - abs(progress * 2 - 1)))
+                    # Taper width near edges
+                    taper = 1.0 - 0.3 * abs(progress * 2 - 1) ** 2
+                    half_w = int(_mouth_w * 0.42 * taper)
+                    x1 = max(0, _cx_m - half_w)
+                    x2 = min(_mouth_w, _cx_m + half_w)
+                    cv2.line(r, (x1, y_abs), (x2, y_abs),
+                             (darkness, darkness // 2, darkness // 3), 1)
+
+            # Teeth upper row
+            if op > 0.08:
+                t_h = max(3, int(cavity_h * 0.22))
+                t_top = int(cavity_top + 2)
+                t_bot = min(t_top + t_h, int(cavity_bot) - 1)
+                tw = 7
+                for tx in range(6, _mouth_w - 5, tw):
+                    x_end = min(tx + tw - 2, _mouth_w - 6)
+                    cv2.rectangle(r, (tx, t_top), (x_end, t_bot), (238, 232, 218), -1)
+                    if tx + tw - 1 < _mouth_w - 5:
+                        r[t_top:t_bot, tx + tw - 1] = (180, 175, 165)
+
+            # Teeth lower row (smaller)
+            if op > 0.2:
+                t_h2 = max(2, int(cavity_h * 0.13))
+                t_bot2 = int(cavity_bot) - 2
+                t_top2 = max(int(cavity_top), t_bot2 - t_h2)
+                for tx in range(7, _mouth_w - 5, tw):
+                    x_end = min(tx + tw - 2, _mouth_w - 6)
+                    cv2.rectangle(r, (tx, t_top2), (x_end, t_bot2), (230, 224, 212), -1)
+                    if tx + tw - 1 < _mouth_w - 5:
+                        r[t_top2:t_bot2, tx + tw - 1] = (170, 165, 155)
+
+    # Blend with feathered mask
+    alpha = _mouth_mask_float
+    roi = img[my:my + _mouth_h, mx:mx + _mouth_w]
     for c in range(3):
-        roi[:, :, c] = (roi[:, :, c].astype(float) * (1 - msk.astype(float) / 255)
-                         + r[:, :, c].astype(float) * (msk.astype(float) / 255)).astype(np.uint8)
+        roi[:, :, c] = (roi[:, :, c].astype(float) * (1 - alpha) +
+                         r[:, :, c].astype(float) * alpha).astype(np.uint8)
     return img
 
 
@@ -189,7 +249,7 @@ def render():
 
         # Generate avatar frame with lip sync
         av = avatar_base.copy()
-        av = mouth_sync(av, openness)
+        av = mouth_sync(av, openness, t)
 
         # To BGRA for compositing
         av_bgra = cv2.cvtColor(av, cv2.COLOR_BGR2BGRA)
