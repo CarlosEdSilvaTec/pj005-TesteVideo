@@ -3,12 +3,13 @@ import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 
-OUTPUT_DIR = r'C:\Progress\temp\IA\pj005-TesteVideo'
+OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 AVATAR_PATH = os.path.join(OUTPUT_DIR, 'avatar.png')
 AUDIO_PATH = os.path.join(OUTPUT_DIR, 'audio_video.mp3')
 AMPLITUDES_PATH = os.path.join(OUTPUT_DIR, 'amplitudes.npy')
 OUTPUT_PATH = os.path.join(OUTPUT_DIR, 'video_final.mp4')
-FFMPEG_PATH = os.path.join(OUTPUT_DIR, 'ffmpeg.exe')
+import shutil
+FFMPEG_PATH = shutil.which('ffmpeg') or r'C:\Users\carlosedsilva\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe'
 
 W, H = 1280, 720
 FPS = 30
@@ -244,8 +245,8 @@ scenes = [
 
 def text_bgra(text, font, color_rgb, alpha=255):
     bbox = font.getbbox(text)
-    tw = bbox[2] - bbox[0] + 12
-    th = bbox[3] - bbox[1] + 12
+    tw = bbox[2] + 16
+    th = int(bbox[3] * 1.2) + 16
     img = Image.new('RGBA', (tw, th), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     draw.text((4, 4), text, font=font, fill=(*color_rgb, alpha))
@@ -318,24 +319,24 @@ def render():
             overlay_bgra(bg, text_bgra(scene['title'], font_l, ac, a1), cx, cy)
         a2 = fa(0.12)
         if a2 > 0:
-            overlay_bgra(bg, text_bgra(scene['sub'], font_m, (235, 235, 235), a2), cx, cy + 65)
+            overlay_bgra(bg, text_bgra(scene['sub'], font_m, (235, 235, 235), a2), cx, cy + 145)
         a3 = fa(0.25)
         if a3 > 0:
-            overlay_bgra(bg, text_bgra(scene['tag'], font_s, (175, 175, 195), a3), cx, cy + 125)
+            overlay_bgra(bg, text_bgra(scene['tag'], font_s, (175, 175, 195), a3), cx, cy + 205)
 
         if scene['start'] == 28 and sp > 0.2:
             a4 = fa(0.2)
             items = [('\u23f1 Economia', 'de horas'), ('\U0001f4c8 Consist\u00eancia', 'nas publica\u00e7\u00f5es'), ('\U0001f4a1 Fim do', 'bloqueio criativo')]
             for ii, (l1, l2) in enumerate(items):
                 ix = cx + 20 + ii * 210
-                overlay_bgra(bg, text_bgra(l1, font_s, (255, 255, 255), a4), ix, cy + 175)
-                overlay_bgra(bg, text_bgra(l2, font_s, (180, 180, 200), a4), ix, cy + 205)
+                overlay_bgra(bg, text_bgra(l1, font_s, (255, 255, 255), a4), ix, cy + 255)
+                overlay_bgra(bg, text_bgra(l2, font_s, (180, 180, 200), a4), ix, cy + 285)
 
         if scene['start'] == 45 and sp > 0.15:
             a5 = fa(0.15)
             days = ['Seg: Dica de uso', 'Ter: Bastidores', 'Qua: Produto destaque', 'Qui: Depoimento', 'Sex: Promo\u00e7\u00e3o']
             for di, day in enumerate(days):
-                overlay_bgra(bg, text_bgra(f'\U0001f4c5 {day}', font_s, (200, 200, 210), a5), cx + 30, cy + 175 + di * 32)
+                overlay_bgra(bg, text_bgra(f'\U0001f4c5 {day}', font_s, (200, 200, 210), a5), cx + 30, cy + 255 + di * 32)
 
         cv2.rectangle(bg, (0, H - 5), (int(W * t / TOTAL_SEC), H), ac, -1)
         writer.write(bg)
