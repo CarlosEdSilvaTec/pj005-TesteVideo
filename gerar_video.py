@@ -33,7 +33,14 @@ sc = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_smile.xml')
 faces = fc.detectMultiScale(gray, 1.1, 4)
 fx, fy, fw, fh = faces[0]
 smiles = sc.detectMultiScale(gray[fy:fy+fh, fx:fx+fw], 1.8, 20)
-_mx, _my, mw, mh = smiles[0]
+if len(smiles) > 0:
+    _mx, _my, mw, mh = smiles[0]
+else:
+    # Fallback to lower part of detected face
+    _mx = int(fw * 0.28)
+    _my = int(fh * 0.68)
+    mw = int(fw * 0.44)
+    mh = int(fh * 0.15)
 mx = fx + _mx; my = fy + _my
 # Expand
 p = int(mh * 0.2)
