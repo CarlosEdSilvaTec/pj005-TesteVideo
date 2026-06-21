@@ -23,7 +23,7 @@ print("Inicializando...")
 
 # Load and prepare avatar
 avatar_full = cv2.imread(AVATAR_PATH)
-AVATAR_SIZE = 600
+AVATAR_SIZE = 480
 avatar_base = cv2.resize(avatar_full, (AVATAR_SIZE, AVATAR_SIZE), interpolation=cv2.INTER_LANCZOS4)
 
 # Face and mouth detection
@@ -171,7 +171,7 @@ def mouth_sync(img, openness, t=0):
             
             # 1. Dark Cavity (Deep maroon/black)
             cavity_pts = []
-            half_w = int(_ctx_w * 0.28)
+            half_w = int(_ctx_w * 0.12)
             for i in range(21):
                 t_i = i / 20.0
                 yy = c_top + t_i * cavity_h_actual
@@ -302,9 +302,9 @@ def render():
         av_bgra = cv2.cvtColor(av, cv2.COLOR_BGR2BGRA)
         av_bgra[:, :, 3] = face_mask
 
-        # Position - larger avatar, more centered
-        ax = 820 + int(math.sin(t * 1.2) * 6)
-        ay = 10 + int(math.sin(t * 0.8) * 4)
+        # Position - static avatar, centered vertically on the right
+        ax = 780
+        ay = 120
         overlay_bgra(bg, av_bgra, ax, ay)
 
         # Text - moved up to avoid bottom clipping
