@@ -109,8 +109,8 @@ def mouth_sync(img, openness, t=0):
     # Organic asymmetry in mouth opening
     asymmetry = math.sin(t * 4.7) * 0.15
 
-    max_upper = int(_ctx_h * 0.04)
-    max_lower = int(_ctx_h * 0.16)
+    max_upper = int(_ctx_h * 0.02)
+    max_lower = int(_ctx_h * 0.08)
     upper_shift = int(max_upper * op)
     lower_shift = int(max_lower * op * (1 + asymmetry * 0.3))
 
@@ -152,71 +152,6 @@ def mouth_sync(img, openness, t=0):
     r = cv2.remap(_ctx_ref, remap_x.astype(np.float32),
                    np.tile(remap_y.reshape(_ctx_h, 1), (1, _ctx_w)).astype(np.float32),
                    cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-
-    # Oral cavity
-    if op > 0.04:
-        cavity_h = int(_ctx_h * 0.20 * op)
-        c_top = seam + 2
-        c_bot = seam + cavity_h - 2
-        cavity_h_actual = max(0, c_bot - c_top)
-
-        if cavity_h_actual > 3:
-            # Cavity polygon with tapered sides and rounded bottom
-            cavity_pts = []
-            half_w = int(_ctx_w * 0.38)
-            for i in range(21):
-                t_i = i / 20.0
-                yy = c_top + t_i * cavity_h_actual
-                # Taper width: narrower at center
-                taper = 1.0 - 0.35 * math.sin(t_i * math.pi) ** 2
-                ww_i = max(4, int(half_w * taper))
-                x_off = math.sin(t_i * math.pi * 2 + t) * 1.5
-                cavity_pts.append([_cx_c + x_off - ww_i, yy])
-            for i in range(20, -1, -1):
-                t_i = i / 20.0
-                yy = c_top + t_i * cavity_h_actual
-                taper = 1.0 - 0.35 * math.sin(t_i * math.pi) ** 2
-                ww_i = max(4, int(half_w * taper))
-                x_off = math.sin(t_i * math.pi * 2 + t) * 1.5
-                cavity_pts.append([_cx_c + x_off + ww_i, yy])
-            cavity_pts = np.array(cavity_pts, dtype=np.int32)
-            cv2.fillPoly(r, [cavity_pts], (5, 2, 1), cv2.LINE_AA)
-
-            # Teeth upper row (curved arch)
-            if op > 0.08:
-                t_h = max(4, int(cavity_h_actual * 0.22))
-                t_top = int(c_top + 1)
-                t_bot = min(int(c_top + t_h), int(c_bot) - 1)
-                if t_bot > t_top:
-                    tw = 8
-                    for tx in range(_cx_c - half_w + 4, _cx_c + half_w - 3, tw):
-                        x1 = tx
-                        x2 = min(tx + tw - 1, _cx_c + half_w - 3)
-                        y_off = int(2 * math.sin((tx - _cx_c) / half_w * math.pi))
-                        yy1 = t_top + y_off
-                        yy2 = t_bot + y_off
-                        if yy2 > yy1:
-                            cv2.rectangle(r, (x1, yy1), (x2, yy2), (242, 236, 222), -1, cv2.LINE_AA)
-                            if x2 + 1 < _ctx_w:
-                                cv2.line(r, (x2, yy1), (x2, yy2), (175, 170, 160), 1)
-
-            # Teeth lower row (smaller)
-            if op > 0.2:
-                t_h2 = max(3, int(cavity_h_actual * 0.12))
-                t_bot2 = int(c_bot) - 1
-                t_top2 = max(int(c_top), t_bot2 - t_h2)
-                if t_bot2 > t_top2:
-                    tw = 7
-                    for tx in range(_cx_c - half_w + 5, _cx_c + half_w - 3, tw):
-                        x1 = tx
-                        x2 = min(tx + tw - 1, _cx_c + half_w - 3)
-                        y_off = int(math.sin((tx - _cx_c) / half_w * math.pi))
-                        yy1 = t_top2 + y_off
-                        yy2 = t_bot2 + y_off
-                        if yy2 > yy1:
-                            cv2.rectangle(r, (x1, yy1), (x2, yy2), (235, 229, 217), -1, cv2.LINE_AA)
-                            if x2 + 1 < _ctx_w:
-                                cv2.line(r, (x2, yy1), (x2, yy2), (170, 165, 158), 1)
 
     # Sub-blend: composite r back into img at context position
     alpha = _ctx_mask
