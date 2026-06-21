@@ -160,6 +160,63 @@ def mouth_sync(img, openness, t=0):
                    np.tile(remap_y.reshape(_ctx_h, 1), (1, _ctx_w)).astype(np.float32),
                    cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
 
+    # Realistic oral cavity & teeth for closed-mouth avatar
+    if op > 0.05:
+        c_top = seam - upper_shift * 0.3
+        c_bot = seam + lower_shift * 0.7
+        cavity_h_actual = max(0, int(c_bot - c_top))
+
+        if cavity_h_actual > 2:
+            overlay = r.copy()
+            
+            # 1. Dark Cavity (Deep maroon/black)
+            cavity_pts = []
+            half_w = int(_ctx_w * 0.28)
+            for i in range(21):
+                t_i = i / 20.0
+                yy = c_top + t_i * cavity_h_actual
+                taper = 1.0 - 0.5 * math.sin(t_i * math.pi) ** 2
+                ww_i = max(2, int(half_w * taper))
+                cavity_pts.append([_cx_c - ww_i, yy])
+            for i in range(20, -1, -1):
+                t_i = i / 20.0
+                yy = c_top + t_i * cavity_h_actual
+                taper = 1.0 - 0.5 * math.sin(t_i * math.pi) ** 2
+                ww_i = max(2, int(half_w * taper))
+                cavity_pts.append([_cx_c + ww_i, yy])
+            
+            cavity_pts = np.array(cavity_pts, dtype=np.int32)
+            cv2.fillPoly(overlay, [cavity_pts], (20, 15, 18), cv2.LINE_AA)
+            
+            # 2. Upper Teeth (Soft white arch)
+            if op > 0.15:
+                t_h = max(2, int(cavity_h_actual * 0.4))
+                t_top = int(c_top)
+                t_bot = min(int(c_top + t_h), int(c_bot))
+                
+                teeth_pts = []
+                for i in range(11):
+                    t_i = i / 10.0
+                    yy = t_bot - 2 * math.sin(t_i * math.pi)
+                    teeth_pts.append([_cx_c - half_w + 4 + i * (half_w * 2 - 8) // 10, yy])
+                for i in range(10, -1, -1):
+                    teeth_pts.append([_cx_c - half_w + 4 + i * (half_w * 2 - 8) // 10, t_top])
+                    
+                teeth_pts = np.array(teeth_pts, dtype=np.int32)
+                cv2.fillPoly(overlay, [teeth_pts], (190, 185, 180), cv2.LINE_AA)
+                
+                # Faint shadow between upper lip and teeth
+                cv2.line(overlay, (_cx_c - half_w, t_top), (_cx_c + half_w, t_top), (30, 20, 20), 2)
+
+            # 3. Blend the cavity into the lips with slight blurring
+            mask = np.zeros((_ctx_h, _ctx_w), dtype=np.uint8)
+            cv2.fillPoly(mask, [cavity_pts], 255)
+            mask = cv2.GaussianBlur(mask, (5, 5), 0)
+            alpha_cavity = mask.astype(float) / 255.0
+            alpha_cavity = np.stack([alpha_cavity]*3, axis=2)
+            
+            r = (r.astype(float) * (1 - alpha_cavity) + overlay.astype(float) * alpha_cavity).astype(np.uint8)
+
     # Sub-blend: composite r back into img at context position
     alpha = _ctx_mask
     roi = img[_ctx_y0:_ctx_y1, _ctx_x0:_ctx_x1]
